@@ -1,7 +1,7 @@
 {
-  "name": "resume",
+  "name": "minesweeper",
   "version": "1.0.0",
-  "description": "Repository for building our resumes",
+  "description": "Simple minesweeper clone",
   "main": "index.js",
   "scripts": {
     "build": "webpack",
@@ -14,6 +14,8 @@
   "license": "ISC",
   "devDependencies": {
     "babel-core": "^6.26.0",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "babel-preset-env": "^1.6.1",
     "babel-preset-react": "^6.24.1",
     "clean-webpack-plugin": "^0.1.18",
@@ -27,6 +29,7 @@
     "html-webpack-plugin": "^2.30.1",
     "html-webpack-template": "^6.1.0",
     "node-sass": "^4.7.2",
+    "prop-types": "^15.5.7",
     "react": "^16.2.0",
     "react-dom": "^16.2.0",
     "sass-loader": "^6.0.6",

@@ -43,7 +43,7 @@ module.exports = {
       disable: process.env.NODE_ENV === "development"
     }),
     new HtmlWebpackPlugin({
-      title: "Sam's Resume",
+      title: "Minesweeper",
       inject: false,
       template: require('html-webpack-template'),
       appMountId: 'app'

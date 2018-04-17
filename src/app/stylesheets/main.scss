@@ -1,7 +1,70 @@
-body, h1 {
-    margin: auto;
+body {
+  margin: 20px;
 }
 
-div:not(#app) {
-    padding: 5px;
+ol, ul {
+  padding-left: 30px;
+}
+
+.board-row:after {
+  clear: both;
+  content: "";
+  display: table;
+}
+
+.status {
+  margin-bottom: 10px;
+}
+
+.square {
+  background: #fff;
+  border: 1px solid #999;
+  float: left;
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 34px;
+  height: 34px;
+  margin-right: -1px;
+  margin-top: -1px;
+  padding: 0;
+  text-align: center;
+  width: 34px;
+}
+
+.square:focus {
+  outline: none;
+}
+
+.kbd-navigation .square:focus {
+  background: #ddd;
+}
+
+.game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .controls {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+  }
+
+  .input {
+      padding: 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      input {
+        display: block;
+        height: 24px;
+        width: 28px;
+        margin-top: 5px;
+      }
+  }
+}
+
+.game-info {
+  margin-left: 20px;
 }

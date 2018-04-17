@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
 
-import Resume from './components/Resume';
+import Game from './components/Game';
 import '../stylesheets/main';
 
 
 export default class App extends Component {
   render() {
-    return <Resume />;
+    return <Game height={10} width={10}/>;
   }
 }
