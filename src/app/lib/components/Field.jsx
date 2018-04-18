@@ -19,12 +19,18 @@ export default class Field extends Component {
   constructor(props) {
     super(props);
 
-    this.state = { field: this.generateField(this.props) };
+    this.state = {
+      field: this.generateField(this.props),
+      populated: false,
+    };
   }
 
   componentWillReceiveProps(nextProps) {
     if (!isEqual(this.props, nextProps)) {
-      this.setState({ field: this.generateField(nextProps) });
+      this.setState({
+        field: this.generateField(nextProps),
+        populated: false,
+      });
     }
   }
 
@@ -67,26 +73,37 @@ export default class Field extends Component {
     const { height, width, density } = props;
 
     const numCells = height * width;
-    const field = Array.from({ length: numCells }, (element, index) => {
+    return Array.from({ length: numCells }, (element, index) => {
       return new CellData(index, height, width);
     });
+  }
+
+  populateFieldAroundCell(field, start) {
+    const { height, width, density } = this.props;
+    const numCells = height * width;
 
     var numBombs = Math.ceil(numCells * density);
     while (numBombs--) {
       while (true) {
-        const cell = field[getRandomInRange(0, numCells)];
+        const index = getRandomInRange(0, numCells);
+        if (index == start.index) {
+          continue;
+        }
+
+        const cell = field[index];
         if (cell.isEmpty()) {
           cell.value = 'B';
           break;
         }
       }
     }
-
-    return field;
   }
 
   handleCellClick(cell) {
     const field = this.state.field.slice();
+    if (!this.state.populated) {
+      this.populateFieldAroundCell(field, cell);
+    }
 
     if (cell.isBomb()) {
       field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
@@ -94,7 +111,10 @@ export default class Field extends Component {
       this.floodFill(field, cell);
     }
 
-    this.setState({ field: field });
+    this.setState({
+      field: field,
+      populated: true,
+    });
   }
 
   resolveCoordinates(x, y) {
