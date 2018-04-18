@@ -8,8 +8,11 @@ export default class Square extends Component {
     const { onClick, source } = this.props;
 
     return (
-      <button className={`square ${source.isVisible() ? '' : 'gray'}`} onClick={onClick}>
-      {source.isVisible() ? source.value : ''}
+      <button className={`square ${source.isVisible() ? '' : 'gray'}`}
+              onClick={onClick}
+              onContextMenu={onClick}
+              >
+      {source.getValue()}
       </button>
     );
   }
@@ -27,6 +30,7 @@ class CellData {
 
     this.value = '';
     this.visible = false;
+    this.flagged = false;
   }
 
   *getNeighbors(ignoreCorners=false) {
@@ -54,6 +58,18 @@ class CellData {
     }
   }
 
+  getValue() {
+    if (!this.isVisible()) {
+      return '';
+    }
+
+    if (this.flagged) {
+      return 'F';
+    }
+
+    return this.value;
+  }
+
   isBomb() {
     return this.value === 'B';
   }
@@ -62,8 +78,21 @@ class CellData {
     return this.value === '';
   }
 
+  isFlagged() {
+    return this.flagged;
+  }
+
   isVisible() {
     return this.visible;
+  }
+
+  toggleFlag() {
+    if (this.isVisible() && !this.isFlagged()) {
+      return;
+    }
+
+    this.flagged = !this.flagged;
+    this.visible = !this.visible;
   }
 }
 

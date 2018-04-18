@@ -24,7 +24,9 @@ export default class Field extends Component {
   render() {
     const field = this.props.field.reduce((aggregate, cell) => {
       const ui = (
-        <Cell key={cell.index} source={cell} onClick={() => this.props.onUpdate(cell)}/>
+        <Cell key={cell.index}
+              source={cell}
+              onClick={(event) => this.props.onUpdate(event, cell)} />
       );
 
       if (aggregate.length <= cell.x) {

@@ -91,17 +91,28 @@ export default class Game extends Component {
     });
   }
 
-  handleFieldUpdate(cell) {
-    const field = this.state.field.slice();
-    if (!this.state.populated) {
-      this.populateFieldAroundCell(field, cell);
-    }
+  handleFieldUpdate(event, cell) {
+    event.preventDefault();
 
-    if (cell.isBomb()) {
-      field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
-      this.setState({ died: true });
+    const field = this.state.field.slice();
+
+    if (event.type === 'contextmenu') {
+      field[cell.index].toggleFlag();
     } else {
-      this.floodFill(field, cell);
+      if (cell.isFlagged()) {
+        return;
+      }
+
+      if (!this.state.populated) {
+        this.populateFieldAroundCell(field, cell);
+      }
+
+      if (cell.isBomb()) {
+        field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
+        this.setState({ died: true });
+      } else {
+        this.floodFill(field, cell);
+      }
     }
 
     this.setState({ field: field });
@@ -185,7 +196,7 @@ export default class Game extends Component {
           <button onClick={() => this.reset()}>{died ? 'Restart' : 'Reset'}</button>
         </div>
         <div className="game-board">
-          <Field field={field} onUpdate={(cell) => this.handleFieldUpdate(cell)}/>
+          <Field field={field} onUpdate={(event, cell) => this.handleFieldUpdate(event, cell)}/>
         </div>
       </div>
     );
