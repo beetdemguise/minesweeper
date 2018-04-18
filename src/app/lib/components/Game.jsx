@@ -26,6 +26,7 @@ export default class Game extends Component {
 
     this.state = {
       field: this.generateField(this.props),
+      died: false,
       populated: false,
       settings: {
         density: this.props.density,
@@ -39,6 +40,7 @@ export default class Game extends Component {
   componentWillReceiveProps(nextProps) {
     this.setState({
       field: this.generateField(nextProps),
+      died: false,
       populated: false,
       settings: {
         density: nextProps.density,
@@ -97,6 +99,7 @@ export default class Game extends Component {
 
     if (cell.isBomb()) {
       field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
+      this.setState({ died: true });
     } else {
       this.floodFill(field, cell);
     }
@@ -131,6 +134,14 @@ export default class Game extends Component {
     this.setState({ populated: true });
   }
 
+  reset() {
+    this.setState({
+      field: this.generateField(this.props),
+      died: false,
+      populated: false,
+    });
+  }
+
   stageUpdate(key, value) {
     this.setState({
       staging: {...this.state.staging, [key]: Number(value)}
@@ -149,6 +160,7 @@ export default class Game extends Component {
   render() {
     const {
       field,
+      died,
       settings: { height, width, density },
       staging: { density: uiDensity, height: uiHeight, width: uiWidth },
     } = this.state;
@@ -170,6 +182,7 @@ export default class Game extends Component {
           />
           <button disabled={!this.hasStagedChanges()}
                   onClick={() => this.updateDimensions()}>Update</button>
+          <button onClick={() => this.reset()}>{died ? 'Restart' : 'Reset'}</button>
         </div>
         <div className="game-board">
           <Field field={field} onUpdate={(cell) => this.handleFieldUpdate(cell)}/>
