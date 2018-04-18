@@ -41,10 +41,6 @@ export default class Field extends Component {
 
     field[cell.index].visible = true;
 
-    if (cell.isBomb()) {
-      return;
-    }
-
     // Calculate number of bombs touching this cell.
     let count = 0;
     for(let { x, y } of cell.getNeighbors()) {
