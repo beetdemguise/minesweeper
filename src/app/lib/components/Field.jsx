@@ -5,122 +5,26 @@ import { isEqual, range } from 'lodash';
 import Cell, { CellData } from './Cell.jsx';
 
 
-function getRandomInRange(min, max) {
-  return Math.floor(Math.random() * (max - min) + min);
-}
-
 export default class Field extends Component {
   static propTypes = {
-    density: PropTypes.number.isRequired,
-    height: PropTypes.number.isRequired,
-    width: PropTypes.number.isRequired,
+    field: PropTypes.array.isRequired,
+    onUpdate: PropTypes.func.isRequired,
   };
 
   constructor(props) {
     super(props);
 
-    this.state = {
-      field: this.generateField(this.props),
-      populated: false,
-    };
+    this.state = { populated: false };
   }
 
   componentWillReceiveProps(nextProps) {
-    if (!isEqual(this.props, nextProps)) {
-      this.setState({
-        field: this.generateField(nextProps),
-        populated: false,
-      });
-    }
-  }
-
-  floodFill(field, cell) {
-    if (cell.isVisible()) {
-      return;
-    }
-
-    field[cell.index].visible = true;
-
-    // Calculate number of bombs touching this cell.
-    let count = 0;
-    for(let { x, y } of cell.getNeighbors()) {
-      const neighbor = field[this.resolveCoordinates(x, y)];
-      if (neighbor.isBomb()) {
-        count++;
-      }
-    }
-
-    if (count) {
-      cell.value = count.toString();
-    }
-
-    if (cell.isEmpty()) {
-      for(let { x, y } of cell.getNeighbors(true)) {
-        const neighbor = field[this.resolveCoordinates(x, y)];
-
-        if (!neighbor.isBomb()) {
-          this.floodFill(field, neighbor);
-        }
-      }
-    }
-  }
-
-  generateField(props) {
-    const { height, width, density } = props;
-
-    const numCells = height * width;
-    return Array.from({ length: numCells }, (element, index) => {
-      return new CellData(index, height, width);
-    });
-  }
-
-  populateFieldAroundCell(field, start) {
-    const { height, width, density } = this.props;
-    const numCells = height * width;
-
-    var numBombs = Math.ceil(numCells * density);
-    while (numBombs--) {
-      while (true) {
-        const index = getRandomInRange(0, numCells);
-        if (index == start.index) {
-          continue;
-        }
-
-        const cell = field[index];
-        if (cell.isEmpty()) {
-          cell.value = 'B';
-          break;
-        }
-      }
-    }
-  }
-
-  handleCellClick(cell) {
-    const field = this.state.field.slice();
-    if (!this.state.populated) {
-      this.populateFieldAroundCell(field, cell);
-    }
-
-    if (cell.isBomb()) {
-      field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
-    } else {
-      this.floodFill(field, cell);
-    }
-
-    this.setState({
-      field: field,
-      populated: true,
-    });
-  }
-
-  resolveCoordinates(x, y) {
-    return this.props.height * x + y;
+    this.setState({ populated: false });
   }
 
   render() {
-    const field = this.state.field.reduce((aggregate, cell) => {
+    const field = this.props.field.reduce((aggregate, cell) => {
       const ui = (
-        <Cell key={cell.index} source={cell} onClick={() => this.handleCellClick(cell)}/>
+        <Cell key={cell.index} source={cell} onClick={() => this.props.onUpdate(cell)}/>
       );
 
       if (aggregate.length <= cell.x) {
