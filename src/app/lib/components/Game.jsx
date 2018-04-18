@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { isEmpty, omit, pick } from 'lodash';
+import { isEmpty } from 'lodash';
 
 import Field from './Field';
 import Input from './Input';
@@ -8,10 +8,12 @@ import Input from './Input';
 
 export default class Game extends Component {
   static propTypes = {
+    density: PropTypes.number,
     height: PropTypes.number,
     width: PropTypes.number,
   };
   static defaultProps = {
+    density: .55,
     height: 5,
     width: 5,
   };
@@ -21,6 +23,7 @@ export default class Game extends Component {
 
     this.state = {
       settings: {
+        density: this.props.density,
         height: this.props.height,
         width: this.props.width,
       },
@@ -31,6 +34,7 @@ export default class Game extends Component {
   componentWillReceiveProps(nextProps) {
     this.setState({
       settings: {
+        density: nextProps.density,
         height: nextProps.height,
         width: nextProps.width,
       },
@@ -42,15 +46,9 @@ export default class Game extends Component {
     return !isEmpty(this.state.staging);
   }
 
-  stageHeightUpdate(value) {
+  stageUpdate(key, value) {
     this.setState({
-      staging: {...this.state.staging, height: Number(value)}
-    });
-  }
-
-  stageWidthUpdate(value) {
-    this.setState({
-      staging: {...this.state.staging, width: Number(value)}
+      staging: {...this.state.staging, [key]: Number(value)}
     });
   }
 
@@ -58,15 +56,15 @@ export default class Game extends Component {
     const { staging, settings } = this.state;
 
     this.setState({
-      settings: {...settings, ...pick(staging, 'height', 'width') },
-      staging: omit(staging, 'height', 'width'),
+      settings: {...settings, ...staging},
+      staging: {},
     });
   }
 
   render() {
     const {
-      settings: { height, width },
-      staging: { height: uiHeight, width: uiWidth },
+      settings: { height, width, density },
+      staging: { density: uiDensity, height: uiHeight, width: uiWidth },
     } = this.state;
 
     return (
@@ -74,17 +72,21 @@ export default class Game extends Component {
         <div className="controls">
           <Input label="Height"
                  value={uiHeight || height}
-                 onChange={(event) => this.stageHeightUpdate(event.target.value)}
+                 onChange={(event) => this.stageUpdate('height', event.target.value)}
           />
           <Input label="Width"
                  value={uiWidth || width}
-                 onChange={(event) => this.stageWidthUpdate(event.target.value)}
+                 onChange={(event) => this.stageUpdate('width', event.target.value)}
+          />
+          <Input label="Density"
+                 value={uiDensity || density}
+                 onChange={(event) => this.stageUpdate('density', event.target.value)}
           />
           <button disabled={!this.hasStagedChanges()}
                   onClick={() => this.updateDimensions()}>Update</button>
         </div>
         <div className="game-board">
-          <Field height={height} width={width}/>
+          <Field height={height} width={width} density={density}/>
         </div>
       </div>
     );
