@@ -6,6 +6,6 @@ import '../stylesheets/main';
 
 export default class App extends Component {
   render() {
-    return <Game height={10} width={10}/>;
+    return <Game />;
   }
 }

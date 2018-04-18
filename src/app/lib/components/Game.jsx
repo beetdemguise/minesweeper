@@ -13,9 +13,9 @@ export default class Game extends Component {
     width: PropTypes.number,
   };
   static defaultProps = {
-    density: .55,
-    height: 5,
-    width: 5,
+    density: .35,
+    height: 15,
+    width: 15,
   };
 
   constructor(props) {

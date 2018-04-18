@@ -9,7 +9,6 @@ function getRandomInRange(min, max) {
   return Math.floor(Math.random() * (max - min) + min);
 }
 
-
 export default class Field extends Component {
   static propTypes = {
     density: PropTypes.number.isRequired,
@@ -29,12 +28,47 @@ export default class Field extends Component {
     }
   }
 
+  floodFill(field, cell) {
+    if (cell.isVisible()) {
+      return;
+    }
+
+    field[cell.index].visible = true;
+
+    if (cell.isBomb()) {
+      return;
+    }
+
+    // Calculate number of bombs touching this cell.
+    let count = 0;
+    for(let { x, y } of cell.getNeighbors()) {
+      const neighbor = field[this.resolveCoordinates(x, y)];
+      if (neighbor.isBomb()) {
+        count++;
+      }
+    }
+
+    if (count) {
+      cell.value = count.toString();
+    }
+
+    if (cell.isEmpty()) {
+      for(let { x, y } of cell.getNeighbors(true)) {
+        const neighbor = field[this.resolveCoordinates(x, y)];
+
+        if (!neighbor.isBomb()) {
+          this.floodFill(field, neighbor);
+        }
+      }
+    }
+  }
+
   generateField(props) {
     const { height, width, density } = props;
 
     const numCells = height * width;
     const field = Array.from({ length: numCells }, (element, index) => {
-      return new CellData(index, width);
+      return new CellData(index, height, width);
     });
 
     var numBombs = Math.ceil(numCells * density);
@@ -53,9 +87,18 @@ export default class Field extends Component {
 
   handleCellClick(cell) {
     const field = this.state.field.slice();
-    field[cell.index].visible = true;
+
+    if (cell.isBomb()) {
+      field.map((cell) => cell.visible = true);
+    } else {
+      this.floodFill(field, cell);
+    }
 
     this.setState({ field: field });
+  }
+
+  resolveCoordinates(x, y) {
+    return this.props.height * x + y;
   }
 
   render() {

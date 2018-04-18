@@ -10,7 +10,7 @@ module.exports = {
   devServer: {
     contentBase: BUILD_DIR
   },
-  entry: `${APP_DIR}/index.jsx`,
+  entry: ['babel-polyfill', `${APP_DIR}/index.jsx`],
   module: {
     rules: [
       {
