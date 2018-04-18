@@ -89,7 +89,7 @@ export default class Field extends Component {
     const field = this.state.field.slice();
 
     if (cell.isBomb()) {
-      field.map((cell) => cell.visible = true);
+      field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
     } else {
       this.floodFill(field, cell);
     }
