@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import classNames from 'classnames';
 
 import Cell from './Cell.jsx';
 
@@ -6,11 +7,15 @@ import Cell from './Cell.jsx';
 export default class Square extends Component {
   render() {
     const { onClick, source } = this.props;
+    const classes = classNames('square', source.getClass(), {
+      hidden: !source.isVisible(),
+    });
 
     return (
-      <button className={`square ${source.isVisible() ? '' : 'gray'}`}
+      <button className={classes}
               onClick={onClick}
               onContextMenu={onClick}
+              onDoubleClick={onClick}
               >
       {source.getValue()}
       </button>
@@ -42,10 +47,6 @@ class CellData {
           continue;
         }
 
-        if (ignoreCorners && Math.abs(dx) + Math.abs(dy) > 1) {
-          continue;
-        }
-
         const x = this.x + dx;
         const y = this.y + dy;
 
@@ -53,18 +54,31 @@ class CellData {
           continue;
         }
 
-        yield { x, y };
+        yield this.toIndex(x, y);
       }
     }
   }
 
-  getValue() {
+  getClass() {
+    if (this.isFlagged()) {
+      return 'flagged hidden';
+    }
+
     if (!this.isVisible()) {
       return '';
     }
 
-    if (this.flagged) {
-      return 'F';
+    if (this.isBomb()) {
+      return 'bomb';
+    }
+
+    const names = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+    return names[Number(this.value)];
+  }
+
+  getValue() {
+    if (!this.isVisible() || this.isFlagged() || this.isBomb()) {
+      return '';
     }
 
     return this.value;
@@ -93,6 +107,10 @@ class CellData {
 
     this.flagged = !this.flagged;
     this.visible = !this.visible;
+  }
+
+  toIndex(x, y) {
+    return this._width * x + y;
   }
 }
 

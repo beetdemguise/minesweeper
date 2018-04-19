@@ -1,3 +1,11 @@
+$box-size: 20px;
+$img-size: 18px;
+
+// Colors
+$background: #e8e8e8;
+$hidden-background: #d8d8d8;
+$dark-gray: #808080;
+
 body {
   margin: 20px;
 }
@@ -17,26 +25,70 @@ ol, ul {
 }
 
 .square {
-  background: #fff;
-  border: 1px solid #999;
+  background: $background;
+  border: 1px solid $dark-gray;
   float: left;
-  font-size: 24px;
+  font-size: 14px;
   font-weight: bold;
-  line-height: 34px;
-  height: 34px;
+  line-height: $box-size;
+  height: $box-size;
   margin-right: -1px;
   margin-top: -1px;
   padding: 0;
   text-align: center;
-  width: 34px;
-}
+  width: $box-size;
 
-.square:focus {
-  outline: none;
-}
+  &:focus {
+    outline: none;
+  }
 
-.square.gray {
-  background-color: #ccc;
+  &.hidden {
+    background: $hidden-background;
+    border-top: 2px solid white;
+    border-right: 2px solid $dark-gray;
+    border-bottom: 2px solid $dark-gray;
+    border-left: 2px solid white;
+  }
+
+  &.one {
+    color: blue;
+  }
+
+  &.two {
+    color: green;
+  }
+
+  &.three {
+    color: red;
+  }
+
+  &.four {
+    color: purple;
+  }
+
+  &.five{
+    color: maroon;
+  }
+
+  &.six {
+    color: teal;
+  }
+
+  &.seven {
+    color: black;
+  }
+
+  &.eight {
+    color: dark-gray;
+  }
+
+  &.flagged {
+    background: $hidden-background url(../assets/flag.png) center center / $img-size $img-size;
+  }
+
+  &.bomb {
+    background: $background url(../assets/bomb.png) center center / $img-size $img-size;
+  }
 }
 
 .kbd-navigation .square:focus {

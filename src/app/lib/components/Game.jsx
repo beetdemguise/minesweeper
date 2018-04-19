@@ -6,7 +6,7 @@ import { CellData } from './Cell';
 import Field from './Field';
 import Input from './Input';
 
-import { getRandomInRange, resolveCoordinates } from '../utils';
+import { getRandomInRange } from '../utils';
 
 
 export default class Game extends Component {
@@ -16,10 +16,12 @@ export default class Game extends Component {
     width: PropTypes.number,
   };
   static defaultProps = {
-    density: .25,
+    density: .10,
     height: 15,
     width: 15,
   };
+
+  static doubleClicked = false;
 
   constructor(props) {
     super(props);
@@ -51,8 +53,16 @@ export default class Game extends Component {
     });
   }
 
-  floodFill(field, cell) {
-    if (cell.isVisible()) {
+  die(field) {
+    field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
+    this.setState({ died: true });
+  }
+
+  doFieldUpdate(type, cell) {
+  }
+
+  floodFill(field, cell, force) {
+    if (cell.isVisible() && !force) {
       return;
     }
 
@@ -60,8 +70,8 @@ export default class Game extends Component {
 
     // Calculate number of bombs touching this cell.
     let count = 0;
-    for(let { x, y } of cell.getNeighbors()) {
-      const neighbor = field[resolveCoordinates(x, y, this.props.width)];
+    for(let index of cell.getNeighbors()) {
+      const neighbor = field[index];
 
       if (neighbor.isBomb()) {
         count++;
@@ -72,9 +82,9 @@ export default class Game extends Component {
       cell.value = count.toString();
     }
 
-    if (cell.isEmpty()) {
-      for(let { x, y } of cell.getNeighbors(true)) {
-        const neighbor = field[resolveCoordinates(x, y, this.props.width)];
+    if (cell.isEmpty() || force) {
+      for(let index of cell.getNeighbors()) {
+        const neighbor = field[index];
 
         if (!neighbor.isBomb()) {
           this.floodFill(field, neighbor);
@@ -91,30 +101,73 @@ export default class Game extends Component {
     });
   }
 
-  handleFieldUpdate(event, cell) {
+  handleClickEvent(event, cell) {
     event.preventDefault();
+
+    if (event.type === 'dblclick') {
+      this.handleDoubleClick(cell);
+    } else if (event.type === 'click') {
+      this.handleLeftClick(cell);
+    } else {
+      this.handleRightClick(cell);
+    }
+  }
+
+  handleDoubleClick(cell) {
+    if (!cell.isVisible() || cell.isFlagged()) {
+      return;
+    }
 
     const field = this.state.field.slice();
 
-    if (event.type === 'contextmenu') {
-      field[cell.index].toggleFlag();
-    } else {
-      if (cell.isFlagged()) {
-        return;
+    let exploded = false;
+    let count = Number(cell.value);
+    for(let index of cell.getNeighbors()) {
+      const neighbor = this.state.field[index];
+
+      if (neighbor.isFlagged()) {
+        count--;
+        continue;
       }
 
-      if (!this.state.populated) {
-        this.populateFieldAroundCell(field, cell);
-      }
-
-      if (cell.isBomb()) {
-        field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
-        this.setState({ died: true });
-      } else {
-        this.floodFill(field, cell);
-      }
+      exploded = exploded || neighbor.isBomb();
     }
 
+    // If they haven't flagged exactly the number of bombs around this cell, ignore.
+    if (count !== 0) {
+      return;
+    }
+
+    if (exploded) {
+      this.die(field);
+    } else {
+      this.floodFill(field, cell, true);
+      this.setState({ field: field });
+    }
+  }
+
+  handleLeftClick(cell) {
+    if (cell.isVisible()) {
+      return;
+    }
+
+    const field = this.state.field.slice();
+    if (!this.state.populated) {
+      this.populateFieldAroundCell(field, cell);
+    }
+
+    if (cell.isBomb()) {
+      this.die(field);
+    } else {
+      this.floodFill(field, cell);
+    }
+
+    this.setState({ field: field });
+  }
+
+  handleRightClick(cell) {
+    const field = this.state.field.slice();
+    field[cell.index].toggleFlag();
     this.setState({ field: field });
   }
 
@@ -196,7 +249,8 @@ export default class Game extends Component {
           <button onClick={() => this.reset()}>{died ? 'Restart' : 'Reset'}</button>
         </div>
         <div className="game-board">
-          <Field field={field} onUpdate={(event, cell) => this.handleFieldUpdate(event, cell)}/>
+          <Field field={field}
+                 onUpdate={(event, cell) => this.handleClickEvent(event, cell)}/>
         </div>
       </div>
     );
