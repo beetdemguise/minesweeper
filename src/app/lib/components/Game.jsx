@@ -5,18 +5,19 @@ import { isEmpty } from 'lodash';
 import { CellData } from './Cell';
 import Field from './Field';
 import Input from './Input';
+import DigitalNumber from './DigitalNumber';
 
 import { getRandomInRange } from '../utils';
 
 
 export default class Game extends Component {
   static propTypes = {
-    density: PropTypes.number,
+    bombs: PropTypes.number,
     height: PropTypes.number,
     width: PropTypes.number,
   };
   static defaultProps = {
-    density: .10,
+    bombs: 35,
     height: 15,
     width: 15,
   };
@@ -30,8 +31,9 @@ export default class Game extends Component {
       field: this.generateField(this.props),
       died: false,
       populated: false,
+      flagCount: 0,
       settings: {
-        density: this.props.density,
+        bombs: this.props.bombs,
         height: this.props.height,
         width: this.props.width,
       },
@@ -44,8 +46,9 @@ export default class Game extends Component {
       field: this.generateField(nextProps),
       died: false,
       populated: false,
+      flagCount: 0,
       settings: {
-        density: nextProps.density,
+        bombs: nextProps.bombs,
         height: nextProps.height,
         width: nextProps.width,
       },
@@ -94,7 +97,7 @@ export default class Game extends Component {
   }
 
   generateField(props) {
-    const { height, width, density } = props;
+    const { height, width, bombs } = props;
 
     return Array.from({ length: height * width }, (element, index) => {
       return new CellData(index, height, width);
@@ -167,8 +170,13 @@ export default class Game extends Component {
 
   handleRightClick(cell) {
     const field = this.state.field.slice();
+
     field[cell.index].toggleFlag();
-    this.setState({ field: field });
+
+    this.setState({
+      field,
+      flagCount: this.state.flagCount + (cell.isFlagged() ? 1 : -1),
+    });
   }
 
   hasStagedChanges() {
@@ -176,11 +184,11 @@ export default class Game extends Component {
   }
 
   populateFieldAroundCell(field, start) {
-    const { height, width, density } = this.props;
+    const { height, width } = this.props;
     const numCells = height * width;
+    let { bombs } = this.props;
 
-    var numBombs = Math.ceil(numCells * density);
-    while (numBombs--) {
+    while (bombs--) {
       while (true) {
         const index = getRandomInRange(0, numCells);
         if (index == start.index) {
@@ -203,6 +211,7 @@ export default class Game extends Component {
       field: this.generateField(this.props),
       died: false,
       populated: false,
+      flagCount: 0,
     });
   }
 
@@ -225,8 +234,9 @@ export default class Game extends Component {
     const {
       field,
       died,
-      settings: { height, width, density },
-      staging: { density: uiDensity, height: uiHeight, width: uiWidth },
+      flagCount,
+      settings: { height, width, bombs },
+      staging: { bombs: uiBombs, height: uiHeight, width: uiWidth },
     } = this.state;
 
     return (
@@ -240,13 +250,14 @@ export default class Game extends Component {
                  value={uiWidth || width}
                  onChange={(event) => this.stageUpdate('width', event.target.value)}
           />
-          <Input label="Density"
-                 value={uiDensity || density}
-                 onChange={(event) => this.stageUpdate('density', event.target.value)}
+          <Input label="Bombs"
+                 value={uiBombs || bombs}
+                 onChange={(event) => this.stageUpdate('bombs', event.target.value)}
           />
           <button disabled={!this.hasStagedChanges()}
                   onClick={() => this.updateDimensions()}>Update</button>
           <button onClick={() => this.reset()}>{died ? 'Restart' : 'Reset'}</button>
+          <DigitalNumber value={bombs - flagCount} digits={3}/>
         </div>
         <div className="game-board">
           <Field field={field}

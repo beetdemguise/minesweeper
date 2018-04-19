@@ -1,0 +1,194 @@
+// Sizes
+$width: 12px;
+$short-edge-length: $width / 6;
+$long-edge-length: $width - 2  * $short-edge-length;
+$height: 3 * $short-edge-length + 2 * $long-edge-length;
+
+$margin: 2px;
+
+// Colors
+$dim-color: #500000;
+$lit-color: #ff0000;
+
+
+@mixin colon-gradients($color) {
+  background: linear-gradient(90deg, $color, $color),
+              linear-gradient(90deg, $color, $color);
+  background-position: 0 $long-edge-length, 0 2 * $short-edge-length + $long-edge-length;
+  background-repeat: no-repeat;
+  background-size: $short-edge-length $short-edge-length, $short-edge-length $short-edge-length;
+}
+
+
+@mixin digit-gradients($top,
+                       $middle,
+                       $bottom,
+                       $top-left,
+                       $top-right,
+                       $bottom-left,
+                       $bottom-right) {
+  background-repeat: no-repeat;
+  background-image: linear-gradient(90deg, $top, $top),
+                    linear-gradient(90deg, $middle, $middle),
+                    linear-gradient(90deg, $bottom, $bottom),
+                    linear-gradient(90deg, $top-left, $top-left),
+                    linear-gradient(90deg, $top-right, $top-right),
+                    linear-gradient(90deg, $bottom-left, $bottom-left),
+                    linear-gradient(90deg, $bottom-right, $bottom-right);
+
+  background-position: $short-edge-length 0,
+                       $short-edge-length $short-edge-length + $long-edge-length,
+                       $short-edge-length 2 * ($short-edge-length + $long-edge-length),
+                       0 $short-edge-length,
+                       $short-edge-length + $long-edge-length $short-edge-length,
+                       0px 2 * $short-edge-length + $long-edge-length,
+                       $short-edge-length + $long-edge-length 2 * $short-edge-length + $long-edge-length;
+  background-size: $long-edge-length $short-edge-length,
+                   $long-edge-length $short-edge-length,
+                   $long-edge-length $short-edge-length,
+                   $short-edge-length $long-edge-length,
+                   $short-edge-length $long-edge-length,
+                   $short-edge-length $long-edge-length,
+                   $short-edge-length $long-edge-length;
+}
+
+
+.digital-number {
+  background: #000;
+  display: flex;
+  padding: $margin;
+
+  & > * {
+    height: $height;
+    margin-top: $margin;
+    margin-bottom: $margin;
+  }
+
+  & .digit {
+    margin-left: $margin;
+    margin-right: $margin;
+    width: $width;
+
+    // Default is all dim.
+    @include digit-gradients($dim-color,
+                             $dim-color,
+                             $dim-color,
+                             $dim-color,
+                             $dim-color,
+                             $dim-color,
+                             $dim-color);
+
+    &.zero {
+        @include digit-gradients($lit-color,
+                                 $dim-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $lit-color);
+    }
+
+    &.one {
+        @include digit-gradients($dim-color,
+                                 $dim-color,
+                                 $dim-color,
+                                 $dim-color,
+                                 $lit-color,
+                                 $dim-color,
+                                 $lit-color);
+    }
+
+    &.two {
+        @include digit-gradients($lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $dim-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $dim-color);
+    }
+
+    &.three {
+        @include digit-gradients($lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $dim-color,
+                                 $lit-color,
+                                 $dim-color,
+                                 $lit-color);
+    }
+
+    &.four {
+        @include digit-gradients($dim-color,
+                                 $lit-color,
+                                 $dim-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $dim-color,
+                                 $lit-color);
+    }
+
+    &.five {
+        @include digit-gradients($lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $dim-color,
+                                 $dim-color,
+                                 $lit-color);
+    }
+
+
+    &.six {
+        @include digit-gradients($lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $dim-color,
+                                 $lit-color,
+                                 $lit-color);
+    }
+
+
+    &.seven {
+        @include digit-gradients($lit-color,
+                                 $dim-color,
+                                 $dim-color,
+                                 $dim-color,
+                                 $lit-color,
+                                 $dim-color,
+                                 $lit-color);
+    }
+
+
+    &.eight {
+        @include digit-gradients($lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $lit-color);
+    }
+
+    &.nine {
+        @include digit-gradients($lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $lit-color,
+                                 $dim-color,
+                                 $lit-color);
+    }
+  }
+
+  & .colon {
+    width: $short-edge-length;
+
+    @include colon-gradients($dim-color);
+
+    &.lit {
+        @include colon-gradients($lit-color);
+    }
+  }
+}

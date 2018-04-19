@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import classNames from 'classnames';
 
-import Cell from './Cell.jsx';
+import { getWordFromNumber } from '../utils';
 
 
 export default class Square extends Component {
@@ -72,8 +72,7 @@ class CellData {
       return 'bomb';
     }
 
-    const names = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
-    return names[Number(this.value)];
+    return getWordFromNumber(this.value);
   }
 
   getValue() {
