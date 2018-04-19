@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { isEmpty } from 'lodash';
+import { isEmpty, zip } from 'lodash';
 
 import { CellData } from './Cell';
 import DigitalNumber from './DigitalNumber';
@@ -10,64 +10,44 @@ import Input from './Input';
 import { getRandomInRange } from '../utils';
 
 
+const DIFFICULTIES = zip(
+  ['beginner', 'intermediate', 'expert', 'super-expert'],
+  [8, 16, 24, 24],
+  [8, 16, 30, 30],
+  [10, 40, 99, 200]
+).reduce(
+  (hash, [key, height, width, bombs]) => {
+    return {...hash, [key]: { height, width, bombs }};
+  },
+{});
+
+
 export default class Game extends Component {
-  static propTypes = {
-    bombs: PropTypes.number,
-    height: PropTypes.number,
-    width: PropTypes.number,
-  };
-  static defaultProps = {
-    bombs: 35,
-    height: 15,
-    width: 15,
-  };
-
-  static doubleClicked = false;
-
   constructor(props) {
     super(props);
 
     this.state = {
-      field: this.generateField(this.props),
+      field: this.generateField('beginner'),
       died: false,
+      difficulty: 'beginner',
       populated: false,
       flagCount: 0,
       timer: 0,
-      settings: {
-        bombs: this.props.bombs,
-        height: this.props.height,
-        width: this.props.width,
-      },
-      staging: {}
     };
-  }
-
-  componentWillReceiveProps(nextProps) {
-    this.setState({
-      field: this.generateField(nextProps),
-      died: false,
-      populated: false,
-      flagCount: 0,
-      timer: 0,
-      settings: {
-        bombs: nextProps.bombs,
-        height: nextProps.height,
-        width: nextProps.width,
-      },
-      staging: {}
-    });
   }
 
   componentWillUnmount() {
     this.stopTimer();
   }
 
-  die(field) {
-    field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
-    this.setState({ died: true });
+  changeDifficulty(difficulty) {
+    this.reset(difficulty);
   }
 
-  doFieldUpdate(type, cell) {
+  die(field) {
+    field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
+    this.stopTimer();
+    this.setState({ died: true });
   }
 
   floodFill(field, cell, force) {
@@ -102,12 +82,16 @@ export default class Game extends Component {
     }
   }
 
-  generateField(props) {
-    const { height, width, bombs } = props;
+  generateField(difficulty) {
+    const { height, width, bombs } = DIFFICULTIES[difficulty];
 
     return Array.from({ length: height * width }, (element, index) => {
       return new CellData(index, height, width);
     });
+  }
+
+  getDifficulty() {
+    return DIFFICULTIES[this.state.difficulty];
   }
 
   handleClickEvent(event, cell) {
@@ -155,7 +139,7 @@ export default class Game extends Component {
       this.die(field);
     } else {
       this.floodFill(field, cell, true);
-      this.setState({ field: field });
+      this.setState({ field });
     }
   }
 
@@ -175,7 +159,7 @@ export default class Game extends Component {
       this.floodFill(field, cell);
     }
 
-    this.setState({ field: field });
+    this.setState({ field });
   }
 
   handleRightClick(cell) {
@@ -189,14 +173,11 @@ export default class Game extends Component {
     });
   }
 
-  hasStagedChanges() {
-    return !isEmpty(this.state.staging);
-  }
-
   populateFieldAroundCell(field, start) {
-    const { height, width } = this.props;
+    const difficulty = this.getDifficulty();
+    const { height, width } = difficulty;
     const numCells = height * width;
-    let { bombs } = this.props;
+    let { bombs } = difficulty;
 
     while (bombs--) {
       while (true) {
@@ -216,20 +197,17 @@ export default class Game extends Component {
     this.setState({ populated: true });
   }
 
-  reset() {
+  reset(difficulty) {
+    const difficultyToSave = difficulty || this.state.difficulty;
+
     this.stopTimer();
     this.setState({
-      field: this.generateField(this.props),
+      field: this.generateField(difficultyToSave),
       died: false,
+      difficulty: difficultyToSave,
       populated: false,
       flagCount: 0,
       timer: 0,
-    });
-  }
-
-  stageUpdate(key, value) {
-    this.setState({
-      staging: {...this.state.staging, [key]: Number(value)}
     });
   }
 
@@ -245,49 +223,39 @@ export default class Game extends Component {
     this.setState({ timer: this.state.timer + 1});
   }
 
-  updateDimensions() {
-    const { staging, settings } = this.state;
-
-    this.setState({
-      settings: {...settings, ...staging},
-      staging: {},
-    });
-  }
-
   render() {
     const {
       field,
       died,
       flagCount,
       timer,
-      settings: { height, width, bombs },
-      staging: { bombs: uiBombs, height: uiHeight, width: uiWidth },
     } = this.state;
+    const { height, width, bombs } = this.getDifficulty();
 
     return (
-      <div className="game">
-        <div className="controls">
-          <DigitalNumber value={timer} digits={3}/>
-          <Input label="Height"
-                 value={uiHeight || height}
-                 onChange={(event) => this.stageUpdate('height', event.target.value)}
-          />
-          <Input label="Width"
-                 value={uiWidth || width}
-                 onChange={(event) => this.stageUpdate('width', event.target.value)}
-          />
-          <Input label="Bombs"
-                 value={uiBombs || bombs}
-                 onChange={(event) => this.stageUpdate('bombs', event.target.value)}
-          />
-          <button disabled={!this.hasStagedChanges()}
-                  onClick={() => this.updateDimensions()}>Update</button>
-          <button onClick={() => this.reset()}>{died ? 'Restart' : 'Reset'}</button>
-          <DigitalNumber value={bombs - flagCount} digits={3}/>
+      <div>
+        <div className="difficulties">
+          {Object.keys(DIFFICULTIES).map(key => {
+            return (
+              <span key={key}>
+                <input type="radio"
+                       checked={this.state.difficulty === key}
+                       onChange={() => this.changeDifficulty(key)}/>
+                {key}
+              </span>
+            );
+          })}
         </div>
-        <div className="game-board">
-          <Field field={field}
-                 onUpdate={(event, cell) => this.handleClickEvent(event, cell)}/>
+        <div className="game">
+          <div className="controls">
+            <DigitalNumber value={timer} digits={3}/>
+            <button onClick={() => this.reset()}>{died ? 'Restart' : 'Reset'}</button>
+            <DigitalNumber value={bombs - flagCount} digits={3}/>
+          </div>
+          <div className="game-board">
+            <Field field={field}
+                   onUpdate={(event, cell) => this.handleClickEvent(event, cell)}/>
+          </div>
         </div>
       </div>
     );

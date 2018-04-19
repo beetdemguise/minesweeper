@@ -121,6 +121,15 @@ ol, ul {
   }
 }
 
+.difficulties {
+  display: flex;
+  flex-direction: column;
+
+  input {
+    margin-right: 10px;
+  }
+}
+
 .game-info {
   margin-left: 20px;
 }
