@@ -30,8 +30,8 @@ class CellData {
 
     this.index = index;
 
-    this.x = Math.floor(index / height);
-    this.y = index % height;
+    this.x = Math.floor(index / width);
+    this.y = index % width;
 
     this.value = '';
     this.visible = false;
@@ -50,7 +50,7 @@ class CellData {
         const x = this.x + dx;
         const y = this.y + dy;
 
-        if (x < 0 || y < 0 || x >= this._width || y >= this._height) {
+        if (x < 0 || y < 0 || x >= this._height || y >= this._width) {
           continue;
         }
 
