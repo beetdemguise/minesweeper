@@ -3,9 +3,9 @@ import PropTypes from 'prop-types';
 import { isEmpty } from 'lodash';
 
 import { CellData } from './Cell';
+import DigitalNumber from './DigitalNumber';
 import Field from './Field';
 import Input from './Input';
-import DigitalNumber from './DigitalNumber';
 
 import { getRandomInRange } from '../utils';
 
@@ -32,6 +32,7 @@ export default class Game extends Component {
       died: false,
       populated: false,
       flagCount: 0,
+      timer: 0,
       settings: {
         bombs: this.props.bombs,
         height: this.props.height,
@@ -47,6 +48,7 @@ export default class Game extends Component {
       died: false,
       populated: false,
       flagCount: 0,
+      timer: 0,
       settings: {
         bombs: nextProps.bombs,
         height: nextProps.height,
@@ -54,6 +56,10 @@ export default class Game extends Component {
       },
       staging: {}
     });
+  }
+
+  componentWillUnmount() {
+    this.stopTimer();
   }
 
   die(field) {
@@ -106,6 +112,10 @@ export default class Game extends Component {
 
   handleClickEvent(event, cell) {
     event.preventDefault();
+
+    if (!this.interval) {
+      this.startTimer();
+    }
 
     if (event.type === 'dblclick') {
       this.handleDoubleClick(cell);
@@ -207,11 +217,13 @@ export default class Game extends Component {
   }
 
   reset() {
+    this.stopTimer();
     this.setState({
       field: this.generateField(this.props),
       died: false,
       populated: false,
       flagCount: 0,
+      timer: 0,
     });
   }
 
@@ -219,6 +231,18 @@ export default class Game extends Component {
     this.setState({
       staging: {...this.state.staging, [key]: Number(value)}
     });
+  }
+
+  startTimer() {
+    this.interval = window.setInterval(() => this.tick(), 1000);
+  }
+
+  stopTimer() {
+    this.interval = window.clearInterval(this.interval);
+  }
+
+  tick() {
+    this.setState({ timer: this.state.timer + 1});
   }
 
   updateDimensions() {
@@ -235,6 +259,7 @@ export default class Game extends Component {
       field,
       died,
       flagCount,
+      timer,
       settings: { height, width, bombs },
       staging: { bombs: uiBombs, height: uiHeight, width: uiWidth },
     } = this.state;
@@ -242,6 +267,7 @@ export default class Game extends Component {
     return (
       <div className="game">
         <div className="controls">
+          <DigitalNumber value={timer} digits={3}/>
           <Input label="Height"
                  value={uiHeight || height}
                  onChange={(event) => this.stageUpdate('height', event.target.value)}
