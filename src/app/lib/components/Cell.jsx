@@ -95,6 +95,10 @@ class CellData {
     return this.flagged;
   }
 
+  isHidden() {
+    return !this.isVisible() || this.isFlagged();
+  }
+
   isVisible() {
     return this.visible;
   }

@@ -4,6 +4,7 @@ import { isEmpty, zip } from 'lodash';
 
 import { CellData } from './Cell';
 import DigitalNumber from './DigitalNumber';
+import FaceButton from './FaceButton';
 import Field from './Field';
 import Input from './Input';
 
@@ -16,8 +17,8 @@ const DIFFICULTIES = zip(
   [8, 16, 30, 30],
   [10, 40, 99, 200]
 ).reduce(
-  (hash, [key, height, width, bombs]) => {
-    return {...hash, [key]: { height, width, bombs }};
+  (hash, [key, height, width, bombCount]) => {
+    return {...hash, [key]: { height, width, bombCount }};
   },
 {});
 
@@ -29,6 +30,7 @@ export default class Game extends Component {
     this.state = {
       field: this.generateField('beginner'),
       died: false,
+      won: false,
       difficulty: 'beginner',
       populated: false,
       flagCount: 0,
@@ -47,7 +49,7 @@ export default class Game extends Component {
   die(field) {
     field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
     this.stopTimer();
-    this.setState({ died: true });
+    this.setState({ field, died: true });
   }
 
   floodFill(field, cell, force) {
@@ -83,7 +85,7 @@ export default class Game extends Component {
   }
 
   generateField(difficulty) {
-    const { height, width, bombs } = DIFFICULTIES[difficulty];
+    const { height, width, bombCount } = DIFFICULTIES[difficulty];
 
     return Array.from({ length: height * width }, (element, index) => {
       return new CellData(index, height, width);
@@ -96,6 +98,10 @@ export default class Game extends Component {
 
   handleClickEvent(event, cell) {
     event.preventDefault();
+
+    if (this.state.died || this.state.won) {
+      return;
+    }
 
     if (!this.interval) {
       this.startTimer();
@@ -137,10 +143,11 @@ export default class Game extends Component {
 
     if (exploded) {
       this.die(field);
-    } else {
-      this.floodFill(field, cell, true);
-      this.setState({ field });
+      return;
     }
+
+    this.floodFill(field, cell, true);
+    this.updateField(field);
   }
 
   handleLeftClick(cell) {
@@ -155,11 +162,11 @@ export default class Game extends Component {
 
     if (cell.isBomb()) {
       this.die(field);
-    } else {
-      this.floodFill(field, cell);
+      return;
     }
 
-    this.setState({ field });
+    this.floodFill(field, cell);
+    this.updateField(field);
   }
 
   handleRightClick(cell) {
@@ -177,9 +184,9 @@ export default class Game extends Component {
     const difficulty = this.getDifficulty();
     const { height, width } = difficulty;
     const numCells = height * width;
-    let { bombs } = difficulty;
+    let { bombCount } = difficulty;
 
-    while (bombs--) {
+    while (bombCount--) {
       while (true) {
         const index = getRandomInRange(0, numCells);
         if (index == start.index) {
@@ -204,6 +211,7 @@ export default class Game extends Component {
     this.setState({
       field: this.generateField(difficultyToSave),
       died: false,
+      won: false,
       difficulty: difficultyToSave,
       populated: false,
       flagCount: 0,
@@ -223,14 +231,36 @@ export default class Game extends Component {
     this.setState({ timer: this.state.timer + 1});
   }
 
+  updateField(field) {
+    const { bombCount } = this.getDifficulty();
+    const hiddenCells = field.filter(cell => !cell.isVisible() || cell.isFlagged());
+
+    if (hiddenCells.length === bombCount) {
+      this.stopTimer();
+
+      hiddenCells.map(cell => {
+        if (!cell.isFlagged()) {
+          cell.toggleFlag();
+        }
+      });
+
+      this.setState({ field, won: true, flagCount: bombCount });
+    }
+    else {
+      this.setState({ field });
+    }
+  }
+
+
   render() {
     const {
       field,
       died,
       flagCount,
       timer,
+      won,
     } = this.state;
-    const { height, width, bombs } = this.getDifficulty();
+    const { height, width, bombCount } = this.getDifficulty();
 
     return (
       <div>
@@ -249,8 +279,8 @@ export default class Game extends Component {
         <div className="game">
           <div className="controls">
             <DigitalNumber value={timer} digits={3}/>
-            <button onClick={() => this.reset()}>{died ? 'Restart' : 'Reset'}</button>
-            <DigitalNumber value={bombs - flagCount} digits={3}/>
+            <FaceButton onClick={() => this.reset()} died={died} won={won}/>
+            <DigitalNumber value={bombCount - flagCount} digits={3}/>
           </div>
           <div className="game-board">
             <Field field={field}
