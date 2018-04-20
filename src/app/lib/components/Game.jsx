@@ -1,12 +1,10 @@
 import React, { Component } from 'react';
-import PropTypes from 'prop-types';
-import { isEmpty, zip } from 'lodash';
+import { forEach, zip } from 'lodash';
 
 import { CellData } from './Cell';
 import DigitalNumber from './DigitalNumber';
 import FaceButton from './FaceButton';
 import Field from './Field';
-import Input from './Input';
 
 import { getRandomInRange } from '../utils';
 
@@ -15,12 +13,17 @@ const DIFFICULTIES = zip(
   ['beginner', 'intermediate', 'expert', 'super-expert'],
   [8, 16, 24, 24],
   [8, 16, 30, 30],
-  [10, 40, 99, 200]
-).reduce(
-  (hash, [key, height, width, bombCount]) => {
-    return {...hash, [key]: { height, width, bombCount }};
-  },
-{});
+  [10, 40, 99, 200],
+).reduce((hash, [key, height, width, bombCount]) =>
+  ({ ...hash, [key]: { height, width, bombCount } }), {});
+
+
+function generateField(difficulty) {
+  const { height, width } = DIFFICULTIES[difficulty];
+  const length = height * width;
+
+  return Array.from({ length }, (element, index) => new CellData(index, height, width));
+}
 
 
 export default class Game extends Component {
@@ -28,7 +31,7 @@ export default class Game extends Component {
     super(props);
 
     this.state = {
-      field: this.generateField('beginner'),
+      field: generateField('beginner'),
       died: false,
       won: false,
       difficulty: 'beginner',
@@ -42,12 +45,21 @@ export default class Game extends Component {
     this.stopTimer();
   }
 
+  getDifficulty() {
+    return DIFFICULTIES[this.state.difficulty];
+  }
+
   changeDifficulty(difficulty) {
     this.reset(difficulty);
   }
 
   die(field) {
-    field.map((cell) => cell.visible = cell.isBomb() || cell.isVisible());
+    field.forEach((cell) => {
+      if (cell.isBomb()) {
+        cell.show();
+      }
+    });
+
     this.stopTimer();
     this.setState({ field, died: true });
   }
@@ -57,43 +69,32 @@ export default class Game extends Component {
       return;
     }
 
-    field[cell.index].visible = true;
+    cell.show();
 
     // Calculate number of bombs touching this cell.
-    let count = 0;
-    for(let index of cell.getNeighbors()) {
+    const count = cell.getNeighbors().reduce((aggregate, index) => {
       const neighbor = field[index];
 
       if (neighbor.isBomb()) {
-        count++;
+        return aggregate + 1;
       }
-    }
+
+      return aggregate;
+    }, 0);
 
     if (count) {
-      cell.value = count.toString();
+      cell.setValue(count.toString());
     }
 
     if (cell.isEmpty() || force) {
-      for(let index of cell.getNeighbors()) {
+      cell.getNeighbors().forEach((index) => {
         const neighbor = field[index];
 
         if (!neighbor.isBomb()) {
           this.floodFill(field, neighbor);
         }
-      }
+      });
     }
-  }
-
-  generateField(difficulty) {
-    const { height, width, bombCount } = DIFFICULTIES[difficulty];
-
-    return Array.from({ length: height * width }, (element, index) => {
-      return new CellData(index, height, width);
-    });
-  }
-
-  getDifficulty() {
-    return DIFFICULTIES[this.state.difficulty];
   }
 
   handleClickEvent(event, cell) {
@@ -123,30 +124,29 @@ export default class Game extends Component {
 
     const field = this.state.field.slice();
 
-    let exploded = false;
-    let count = Number(cell.value);
-    for(let index of cell.getNeighbors()) {
+    const neighbors = cell.getNeighbors();
+    const unflaggedBombs = neighbors.reduce((aggregate, index) => {
       const neighbor = this.state.field[index];
 
       if (neighbor.isFlagged()) {
-        count--;
-        continue;
+        return aggregate - 1;
       }
 
-      exploded = exploded || neighbor.isBomb();
-    }
+      return aggregate;
+    }, Number(cell.value));
 
     // If they haven't flagged exactly the number of bombs around this cell, ignore.
-    if (count !== 0) {
+    if (unflaggedBombs) {
       return;
     }
 
-    if (exploded) {
+    // If they _did_ flag enough spaces but there was a bomb unflagged die.
+    if (neighbors.some(index => field[index].isBomb() && !field[index].isFlagged())) {
       this.die(field);
       return;
     }
 
-    this.floodFill(field, cell, true);
+    this.floodFill(field, field[cell.index], true);
     this.updateField(field);
   }
 
@@ -165,7 +165,7 @@ export default class Game extends Component {
       return;
     }
 
-    this.floodFill(field, cell);
+    this.floodFill(field, field[cell.index]);
     this.updateField(field);
   }
 
@@ -181,25 +181,22 @@ export default class Game extends Component {
   }
 
   populateFieldAroundCell(field, start) {
-    const difficulty = this.getDifficulty();
-    const { height, width } = difficulty;
-    const numCells = height * width;
-    let { bombCount } = difficulty;
+    const { height, width, bombCount } = this.getDifficulty();
+    const length = height * width;
 
-    while (bombCount--) {
+    forEach(Array(bombCount), () => {
       while (true) {
-        const index = getRandomInRange(0, numCells);
-        if (index == start.index) {
-          continue;
-        }
+        const index = getRandomInRange(0, length);
+        if (index !== start.index) {
+          const cell = field[index];
 
-        const cell = field[index];
-        if (cell.isEmpty()) {
-          cell.value = 'B';
-          break;
+          if (cell.isEmpty()) {
+            cell.value = 'B';
+            return;
+          }
         }
       }
-    }
+    });
 
     this.setState({ populated: true });
   }
@@ -209,7 +206,7 @@ export default class Game extends Component {
 
     this.stopTimer();
     this.setState({
-      field: this.generateField(difficultyToSave),
+      field: generateField(difficultyToSave),
       died: false,
       won: false,
       difficulty: difficultyToSave,
@@ -228,7 +225,7 @@ export default class Game extends Component {
   }
 
   tick() {
-    this.setState({ timer: this.state.timer + 1});
+    this.setState({ timer: this.state.timer + 1 });
   }
 
   updateField(field) {
@@ -238,15 +235,14 @@ export default class Game extends Component {
     if (hiddenCells.length === bombCount) {
       this.stopTimer();
 
-      hiddenCells.map(cell => {
+      hiddenCells.forEach((cell) => {
         if (!cell.isFlagged()) {
           cell.toggleFlag();
         }
       });
 
       this.setState({ field, won: true, flagCount: bombCount });
-    }
-    else {
+    } else {
       this.setState({ field });
     }
   }
@@ -260,31 +256,33 @@ export default class Game extends Component {
       timer,
       won,
     } = this.state;
-    const { height, width, bombCount } = this.getDifficulty();
+    const { bombCount } = this.getDifficulty();
 
     return (
       <div>
         <div className="difficulties">
-          {Object.keys(DIFFICULTIES).map(key => {
-            return (
-              <span key={key}>
-                <input type="radio"
-                       checked={this.state.difficulty === key}
-                       onChange={() => this.changeDifficulty(key)}/>
-                {key}
-              </span>
-            );
-          })}
+          {Object.keys(DIFFICULTIES).map(key => (
+            <span key={key}>
+              <input
+                type="radio"
+                checked={this.state.difficulty === key}
+                onChange={() => this.changeDifficulty(key)}
+              />
+              {key}
+            </span>
+          ))}
         </div>
         <div className="game">
           <div className="controls">
-            <DigitalNumber value={timer} digits={3}/>
-            <FaceButton onClick={() => this.reset()} died={died} won={won}/>
-            <DigitalNumber value={bombCount - flagCount} digits={3}/>
+            <DigitalNumber value={timer} digits={3} />
+            <FaceButton onClick={() => this.reset()} died={died} won={won} />
+            <DigitalNumber value={bombCount - flagCount} digits={3} />
           </div>
           <div className="game-board">
-            <Field field={field}
-                   onUpdate={(event, cell) => this.handleClickEvent(event, cell)}/>
+            <Field
+              field={field}
+              onUpdate={(event, cell) => this.handleClickEvent(event, cell)}
+            />
           </div>
         </div>
       </div>

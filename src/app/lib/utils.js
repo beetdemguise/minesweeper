@@ -2,7 +2,7 @@ const NUMBER_NAMES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'sev
 
 
 function getRandomInRange(min, max) {
-  return Math.floor(Math.random() * (max - min) + min);
+  return Math.floor((Math.random() * (max - min)) + min);
 }
 
 function getWordFromNumber(digit) {

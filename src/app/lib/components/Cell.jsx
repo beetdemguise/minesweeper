@@ -1,32 +1,39 @@
-import React, { Component } from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 import classNames from 'classnames';
 
 import { getWordFromNumber } from '../utils';
 
 
-export default class Square extends Component {
-  render() {
-    const { onClick, source } = this.props;
-    const classes = classNames('square', source.getClass(), {
-      hidden: !source.isVisible(),
-    });
+export default function Square({ onClick, source }) {
+  const classes = classNames('square', source.getClass(), {
+    hidden: !source.isVisible(),
+  });
 
-    return (
-      <button className={classes}
-              onClick={onClick}
-              onContextMenu={onClick}
-              onDoubleClick={onClick}
-              >
+  return (
+    <button
+      className={classes}
+      onClick={onClick}
+      onContextMenu={onClick}
+      onDoubleClick={onClick}
+    >
       {source.getValue()}
-      </button>
-    );
-  }
+    </button>
+  );
 }
+
+Square.propTypes = {
+  onClick: PropTypes.func.isRequired,
+  source: PropTypes.shape({
+    getValue: PropTypes.func.isRequired,
+    isVisible: PropTypes.func.isRequired,
+  }).isRequired,
+};
 
 class CellData {
   constructor(index, height, width) {
-    this._height = height;
-    this._width = width;
+    this.height = height;
+    this.width = width;
 
     this.index = index;
 
@@ -38,25 +45,22 @@ class CellData {
     this.flagged = false;
   }
 
-  *getNeighbors(ignoreCorners=false) {
+  getNeighbors() {
     const range = [-1, 0, 1];
 
-    for(let dx of range) {
-      for(let dy of range) {
-        if (!dx && !dy) {
-          continue;
+    return range.reduce((array, dx) =>
+      [...array, ...range.reduce((neighbors, dy) => {
+        if (dx || dy) {
+          const x = this.x + dx;
+          const y = this.y + dy;
+
+          if (x >= 0 && y >= 0 && x < this.height && y < this.width) {
+            return [...neighbors, this.toIndex(x, y)];
+          }
         }
 
-        const x = this.x + dx;
-        const y = this.y + dy;
-
-        if (x < 0 || y < 0 || x >= this._height || y >= this._width) {
-          continue;
-        }
-
-        yield this.toIndex(x, y);
-      }
-    }
+        return neighbors;
+      }, [])], []);
   }
 
   getClass() {
@@ -99,6 +103,14 @@ class CellData {
     return this.visible;
   }
 
+  setValue(value) {
+    this.value = value;
+  }
+
+  show() {
+    this.visible = true;
+  }
+
   toggleFlag() {
     if (this.isVisible() && !this.isFlagged()) {
       return;
@@ -109,7 +121,7 @@ class CellData {
   }
 
   toIndex(x, y) {
-    return this._width * x + y;
+    return (this.width * x) + y;
   }
 }
 

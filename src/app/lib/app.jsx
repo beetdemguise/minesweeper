@@ -1,11 +1,12 @@
-import React, { Component } from 'react';
+import React from 'react';
 
 import Game from './components/Game';
-import '../stylesheets/main';
+
+import '../stylesheets/main.scss';
 
 
-export default class App extends Component {
-  render() {
-    return <Game />;
-  }
+export default function App() {
+  return (
+    <Game />
+  );
 }
