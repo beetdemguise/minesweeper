@@ -11,8 +11,13 @@ export default function Square({
   onMouseUp,
   source,
 }) {
-  const classes = classNames('square', source.getClass(), {
+  const classes = classNames('square', {
+    bomb: source.wrong || source.causedDeath || (source.isVisible() && source.isBomb() && !source.isFlagged()),
+    cod: source.causedDeath,
+    flagged: source.isFlagged(),
     hidden: !source.isVisible(),
+    wrong: source.wrong,
+    [getWordFromNumber(source.value)]: source.isVisible(),
   });
 
   return (
@@ -52,6 +57,9 @@ class CellData {
     this.value = '';
     this.visible = false;
     this.flagged = false;
+
+    this.causedDeath = false;
+    this.wrong = false;
   }
 
   getNeighbors() {
@@ -72,23 +80,11 @@ class CellData {
       }, [])], []);
   }
 
-  getClass() {
-    if (this.isFlagged()) {
-      return 'flagged hidden';
-    }
-
-    if (!this.isVisible()) {
-      return '';
-    }
-
-    if (this.isBomb()) {
-      return 'bomb';
-    }
-
-    return getWordFromNumber(this.value);
-  }
-
   getValue() {
+    if (this.wrong) {
+      return 'X';
+    }
+
     if (!this.isVisible() || this.isFlagged() || this.isBomb()) {
       return '';
     }
@@ -112,6 +108,14 @@ class CellData {
     return this.visible;
   }
 
+  markAsCauseOfDeath() {
+    this.causedDeath = true;
+  }
+
+  markAsIncorrectlyFlagged() {
+    this.wrong = true;
+  }
+
   setValue(value) {
     this.value = value;
   }
@@ -126,7 +130,6 @@ class CellData {
     }
 
     this.flagged = !this.flagged;
-    this.visible = !this.visible;
   }
 
   toIndex(x, y) {

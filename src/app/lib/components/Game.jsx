@@ -1,12 +1,13 @@
 import React, { Component } from 'react';
 import { forEach, zip } from 'lodash';
+import seedrandom from 'seedrandom';
 
 import { CellData } from './Cell';
 import DigitalNumber from './DigitalNumber';
 import FaceButton from './FaceButton';
 import Field from './Field';
 
-import { getRandomInRange } from '../utils';
+import { generateSeed, getRandomInRange } from '../utils';
 
 
 const DIFFICULTIES = zip(
@@ -30,14 +31,17 @@ export default class Game extends Component {
   constructor(props) {
     super(props);
 
+    const seed = generateSeed();
     this.state = {
-      field: generateField('beginner'),
       died: false,
-      won: false,
       difficulty: 'beginner',
-      populated: false,
+      field: generateField('beginner'),
       flagCount: 0,
+      populated: false,
+      rng: seedrandom(seed),
+      seed,
       timer: 0,
+      won: false,
     };
   }
 
@@ -57,6 +61,8 @@ export default class Game extends Component {
     field.forEach((cell) => {
       if (cell.isBomb()) {
         cell.show();
+      } else if (cell.isFlagged()) {
+        cell.markAsIncorrectlyFlagged();
       }
     });
 
@@ -144,7 +150,7 @@ export default class Game extends Component {
   }
 
   handleLeftClick(cell) {
-    if (cell.isVisible()) {
+    if (cell.isVisible() || cell.isFlagged()) {
       return;
     }
 
@@ -154,6 +160,7 @@ export default class Game extends Component {
     }
 
     if (cell.isBomb()) {
+      cell.markAsCauseOfDeath();
       this.die(field);
       return;
     }
@@ -185,7 +192,7 @@ export default class Game extends Component {
 
     forEach(Array(bombCount), () => {
       while (true) {
-        const index = getRandomInRange(0, length);
+        const index = getRandomInRange(0, length, this.state.rng);
         if (index !== start.index) {
           const cell = field[index];
 
@@ -202,16 +209,19 @@ export default class Game extends Component {
 
   reset(difficulty) {
     const difficultyToSave = difficulty || this.state.difficulty;
+    const seed = generateSeed();
 
     this.stopTimer();
     this.setState({
-      field: generateField(difficultyToSave),
       died: false,
-      won: false,
       difficulty: difficultyToSave,
-      populated: false,
+      field: generateField(difficultyToSave),
       flagCount: 0,
+      populated: false,
+      rng: seedrandom(seed),
+      seed,
       timer: 0,
+      won: false,
     });
   }
 
@@ -253,6 +263,7 @@ export default class Game extends Component {
       died,
       flagCount,
       isMouseDown,
+      seed,
       timer,
       won,
     } = this.state;
@@ -282,6 +293,7 @@ export default class Game extends Component {
               won={won}
             />
             <DigitalNumber value={bombCount - flagCount} digits={3} />
+            <span>{seed}</span>
           </div>
           <div className="game-board">
             <Field

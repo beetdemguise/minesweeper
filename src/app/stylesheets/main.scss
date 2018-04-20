@@ -88,6 +88,17 @@ ol, ul {
 
   &.bomb {
     background: $background url(../assets/bomb.png) center center / $img-size $img-size;
+
+    &.cod {
+        background-color: red;
+    }
+
+    &.wrong {
+        color: red;
+        line-height: 10px;
+        font-size: 15px;
+        font-weight: normal;
+    }
   }
 }
 
