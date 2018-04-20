@@ -125,15 +125,8 @@ export default class Game extends Component {
     const field = this.state.field.slice();
 
     const neighbors = cell.getNeighbors();
-    const unflaggedBombs = neighbors.reduce((aggregate, index) => {
-      const neighbor = this.state.field[index];
-
-      if (neighbor.isFlagged()) {
-        return aggregate - 1;
-      }
-
-      return aggregate;
-    }, Number(cell.value));
+    const unflaggedBombs = neighbors
+      .reduce((aggregate, index) => aggregate - (1 * field[index].isFlagged()), Number(cell.value));
 
     // If they haven't flagged exactly the number of bombs around this cell, ignore.
     if (unflaggedBombs) {
