@@ -59,9 +59,11 @@ export default class Game extends Component {
 
   die(field) {
     field.forEach((cell) => {
-      if (cell.isBomb()) {
+      if (cell.isBomb() && !cell.isFlagged()) {
         cell.show();
-      } else if (cell.isFlagged()) {
+      }
+
+      if (!cell.isBomb() && cell.isFlagged()) {
         cell.markAsIncorrectlyFlagged();
       }
     });

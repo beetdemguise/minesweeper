@@ -12,7 +12,9 @@ export default function Square({
   source,
 }) {
   const classes = classNames('square', {
-    bomb: source.wrong || source.causedDeath || (source.isVisible() && source.isBomb() && !source.isFlagged()),
+    bomb: source.wrong
+      || source.causedDeath
+      || (source.isVisible() && source.isBomb() && !source.isFlagged()),
     cod: source.causedDeath,
     flagged: source.isFlagged(),
     hidden: !source.isVisible(),
