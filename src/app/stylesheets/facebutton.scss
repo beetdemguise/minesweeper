@@ -26,6 +26,10 @@ $img-size: 18px;
     border-left: 2px solid #808080;
   }
 
+  &.anxious {
+    background-image: url(../assets/anxious.png);
+  }
+
   &.died {
     background-image: url(../assets/died.png);
   }

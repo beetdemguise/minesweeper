@@ -162,6 +162,12 @@ export default class Game extends Component {
     this.updateField(field);
   }
 
+  handleMouseEvent(event, direction) {
+    if (event.button === 0) {
+      this.setState({ isMouseDown: direction === 'down' });
+    }
+  }
+
   handleRightClick(cell) {
     const field = this.state.field.slice();
 
@@ -246,6 +252,7 @@ export default class Game extends Component {
       field,
       died,
       flagCount,
+      isMouseDown,
       timer,
       won,
     } = this.state;
@@ -268,12 +275,19 @@ export default class Game extends Component {
         <div className="game">
           <div className="controls">
             <DigitalNumber value={timer} digits={3} />
-            <FaceButton onClick={() => this.reset()} died={died} won={won} />
+            <FaceButton
+              onClick={() => this.reset()}
+              anxious={isMouseDown}
+              died={died}
+              won={won}
+            />
             <DigitalNumber value={bombCount - flagCount} digits={3} />
           </div>
           <div className="game-board">
             <Field
               field={field}
+              onMouseDown={event => this.handleMouseEvent(event, 'down')}
+              onMouseUp={event => this.handleMouseEvent(event, 'up')}
               onUpdate={(event, cell) => this.handleClickEvent(event, cell)}
             />
           </div>

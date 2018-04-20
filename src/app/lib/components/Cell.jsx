@@ -5,7 +5,12 @@ import classNames from 'classnames';
 import { getWordFromNumber } from '../utils';
 
 
-export default function Square({ onClick, source }) {
+export default function Square({
+  onClick,
+  onMouseDown,
+  onMouseUp,
+  source,
+}) {
   const classes = classNames('square', source.getClass(), {
     hidden: !source.isVisible(),
   });
@@ -14,6 +19,8 @@ export default function Square({ onClick, source }) {
     <button
       className={classes}
       onClick={onClick}
+      onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
       onContextMenu={onClick}
       onDoubleClick={onClick}
     >
@@ -24,6 +31,8 @@ export default function Square({ onClick, source }) {
 
 Square.propTypes = {
   onClick: PropTypes.func.isRequired,
+  onMouseDown: PropTypes.func.isRequired,
+  onMouseUp: PropTypes.func.isRequired,
   source: PropTypes.shape({
     getValue: PropTypes.func.isRequired,
     isVisible: PropTypes.func.isRequired,

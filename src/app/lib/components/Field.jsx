@@ -4,13 +4,20 @@ import PropTypes from 'prop-types';
 import Cell from './Cell';
 
 
-export default function Field({ field, onUpdate }) {
+export default function Field({
+  field,
+  onMouseDown,
+  onMouseUp,
+  onUpdate,
+}) {
   const groupedField = field.reduce((aggregate, cell) => {
     const ui = (
       <Cell
         key={cell.index}
         source={cell}
         onClick={event => onUpdate(event, cell)}
+        onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
       />
     );
 
@@ -41,5 +48,7 @@ Field.propTypes = {
     index: PropTypes.number.isRequired,
     x: PropTypes.number.isRequired,
   })).isRequired,
+  onMouseDown: PropTypes.func.isRequired,
+  onMouseUp: PropTypes.func.isRequired,
   onUpdate: PropTypes.func.isRequired,
 };
