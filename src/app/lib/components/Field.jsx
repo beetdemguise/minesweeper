@@ -1,37 +1,48 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { range } from 'lodash';
 
 import Cell from './Cell';
 
+import { coordsToKey } from '../utils/cells';
+
 
 export default function Field({
-  field,
+  height,
+  width,
+  bombs,
+  counts,
+  flags,
+  hidden,
+  killer,
   onMouseDown,
   onMouseUp,
   onUpdate,
 }) {
-  const groupedField = field.reduce((aggregate, cell) => {
-    const ui = (
+  const field = range(height).map(x => range(width).map((y) => {
+    const key = coordsToKey(x, y);
+    const isBomb = bombs.has(key);
+    const isFlagged = flags.has(key);
+
+    return (
       <Cell
-        key={cell.index}
-        source={cell}
-        onClick={event => onUpdate(event, cell)}
+        key={key}
+        isBomb={bombs.has(key)}
+        isFlagged={flags.has(key)}
+        isHidden={hidden.has(key)}
+        onClick={event => onUpdate(event, x, y)}
         onMouseDown={onMouseDown}
         onMouseUp={onMouseUp}
+        value={counts[key]}
+        wasIncorrectlyFlagged={!!killer && isFlagged && !isBomb}
+        wasKiller={key === killer}
       />
     );
-
-    if (aggregate.length <= cell.x) {
-      return [...aggregate, [ui]];
-    }
-
-    const last = aggregate[aggregate.length - 1];
-    return [...aggregate.slice(0, -1), [...last, ui]];
-  }, []);
+  }));
 
   return (
     <div>
-      {groupedField.map((children, row) =>
+      {field.map((children, row) =>
         (
           /* eslint-disable react/no-array-index-key */
           <div key={row} className="board-row">
@@ -44,11 +55,20 @@ export default function Field({
 }
 
 Field.propTypes = {
-  field: PropTypes.arrayOf(PropTypes.shape({
-    index: PropTypes.number.isRequired,
-    x: PropTypes.number.isRequired,
-  })).isRequired,
+  height: PropTypes.number.isRequired,
+  width: PropTypes.number.isRequired,
+  bombs: PropTypes.instanceOf(Set).isRequired,
+  /* eslint-disable react/forbid-prop-types */
+  counts: PropTypes.object.isRequired,
+  /* eslint-enable react/forbid-prop-types */
+  flags: PropTypes.instanceOf(Set).isRequired,
+  hidden: PropTypes.instanceOf(Set).isRequired,
+  killer: PropTypes.string,
   onMouseDown: PropTypes.func.isRequired,
   onMouseUp: PropTypes.func.isRequired,
   onUpdate: PropTypes.func.isRequired,
+};
+
+Field.defaultProps = {
+  killer: undefined,
 };

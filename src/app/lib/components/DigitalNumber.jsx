@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { zip } from 'lodash';
 
-import { getWordFromNumber } from '../utils';
+import { getWordFromNumber } from '../utils/general';
 import '../../stylesheets/digital.scss';
 
 

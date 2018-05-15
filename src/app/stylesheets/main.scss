@@ -84,6 +84,14 @@ ol, ul {
 
   &.flagged {
     background: $hidden-background url(../assets/flag.png) center center / $img-size $img-size;
+
+    &.wrong:before {
+      content: "\274c";
+      position: relative;
+      top: -2px;
+      left: .5px;
+      font-size: 12px;
+    }
   }
 
   &.bomb {
@@ -91,13 +99,6 @@ ol, ul {
 
     &.cod {
         background-color: red;
-    }
-
-    &.wrong {
-        color: red;
-        line-height: 10px;
-        font-size: 15px;
-        font-weight: normal;
     }
   }
 }

@@ -1,13 +1,13 @@
 import React, { Component } from 'react';
-import { forEach, zip } from 'lodash';
+import { flatten, range, zip } from 'lodash';
 import seedrandom from 'seedrandom';
 
-import { CellData } from './Cell';
 import DigitalNumber from './DigitalNumber';
 import FaceButton from './FaceButton';
 import Field from './Field';
 
-import { generateSeed, getRandomInRange } from '../utils';
+import { generateSeed, getRandomInRange } from '../utils/general';
+import { coordsToKey, getNeighbors } from '../utils/cells';
 
 
 const DIFFICULTIES = zip(
@@ -19,25 +19,36 @@ const DIFFICULTIES = zip(
   ({ ...hash, [key]: { height, width, bombCount } }), {});
 
 
-function generateField(difficulty) {
-  const { height, width } = DIFFICULTIES[difficulty];
-  const length = height * width;
-
-  return Array.from({ length }, (element, index) => new CellData(index, height, width));
-}
-
+const contains = (set, x, y) => set.has(coordsToKey(x, y));
 
 export default class Game extends Component {
   constructor(props) {
     super(props);
 
+    this.state = this.getInitialState('beginner');
+  }
+
+  getInitialState(difficulty) {
+    const difficultyToSave = difficulty || this.state.difficulty;
+    const dimensions = DIFFICULTIES[difficultyToSave];
+    const { height, width } = dimensions;
+
+    const field = {
+      bombs: new Set(),
+      flags: new Set(),
+      hidden: new Set(flatten(range(height).map(x => range(width).map(y => coordsToKey(x, y))))),
+    };
+
     const seed = generateSeed();
-    this.state = {
-      died: false,
-      difficulty: 'beginner',
-      field: generateField('beginner'),
-      flagCount: 0,
-      populated: false,
+
+    this.stopTimer();
+    return {
+      counts: {},
+      difficulty: difficultyToSave,
+      dimensions,
+      field,
+      isMouseDown: false,
+      killer: undefined,
       rng: seedrandom(seed),
       seed,
       timer: 0,
@@ -54,61 +65,82 @@ export default class Game extends Component {
   }
 
   changeDifficulty(difficulty) {
-    this.reset(difficulty);
+    this.setState(this.getInitialState(difficulty));
   }
 
-  die(field) {
-    field.forEach((cell) => {
-      if (cell.isBomb() && !cell.isFlagged()) {
-        cell.show();
-      }
+  die(x, y) {
+    const { field } = this.state;
+    const { bombs, flags } = field;
 
-      if (!cell.isBomb() && cell.isFlagged()) {
-        cell.markAsIncorrectlyFlagged();
-      }
-    });
+    const hidden = new Set([...field.hidden].filter(key => !bombs.has(key) || flags.has(key)));
 
     this.stopTimer();
-    this.setState({ field, died: true });
+    this.setState({ killer: coordsToKey(x, y), field: { ...field, hidden } });
   }
 
-  floodFill(field, cell, force) {
-    if (cell.isVisible() && !force) {
-      return;
-    }
+  floodFill(args) {
+    const { counts, dimensions: { height, width }, field } = this.state;
+    const { flags, hidden } = field;
+    const { bombs = field.bombs } = args;
 
-    cell.show();
+    const visible = new Set();
+    const newCounts = new Set();
+    const show = (x, y, force) => {
+      const key = coordsToKey(x, y);
 
-    // Calculate number of bombs touching this cell.
-    const count = cell.getNeighbors().reduce((aggregate, index) => {
-      const neighbor = field[index];
-
-      if (neighbor.isBomb()) {
-        return aggregate + 1;
+      if ((visible.has(key) || !hidden.has(key) || flags.has(key)) && !force) {
+        return;
       }
 
-      return aggregate;
-    }, 0);
+      visible.add(key);
 
-    if (count) {
-      cell.setValue(count.toString());
-    }
+      // Calculate number of bombs touching this cell.
+      const neighbors = getNeighbors(x, y, height, width);
+      const count = neighbors
+        .filter(({ x: neighborX, y: neighborY }) => bombs.has(coordsToKey(neighborX, neighborY))).length;
 
-    if (cell.isEmpty() || force) {
-      cell.getNeighbors().forEach((index) => {
-        const neighbor = field[index];
+      newCounts[key] = count;
 
-        if (!neighbor.isBomb()) {
-          this.floodFill(field, neighbor);
-        }
-      });
-    }
+      if (!count || force) {
+        neighbors.forEach(({ x: neighborX, y: neighborY }) => {
+          if (!bombs.has(coordsToKey(neighborX, neighborY))) {
+            show(neighborX, neighborY, false);
+          }
+        });
+      }
+    };
+
+    show(args.x, args.y, args.force || false);
+
+    this.setState({
+      counts: {
+        ...counts,
+        ...newCounts,
+      },
+      field: {
+        ...field,
+        bombs,
+        hidden: new Set([...hidden].filter(key => !visible.has(key))),
+      },
+    });
   }
 
-  handleClickEvent(event, cell) {
+  isBomb(x, y) {
+    return contains(this.state.field.bombs, x, y);
+  }
+
+  isFlagged(x, y) {
+    return contains(this.state.field.flags, x, y);
+  }
+
+  isVisible(x, y) {
+    return !contains(this.state.field.hidden, x, y);
+  }
+
+  handleClickEvent(event, x, y) {
     event.preventDefault();
 
-    if (this.state.died || this.state.won) {
+    if (!!this.state.killer || this.state.won) {
       return;
     }
 
@@ -117,24 +149,37 @@ export default class Game extends Component {
     }
 
     if (event.type === 'dblclick') {
-      this.handleDoubleClick(cell);
+      this.handleDoubleClick(x, y);
     } else if (event.type === 'click') {
-      this.handleLeftClick(cell);
+      this.handleLeftClick(x, y);
     } else {
-      this.handleRightClick(cell);
+      this.handleRightClick(x, y);
     }
+
+    window.setTimeout(() => {
+      this.checkForFinish();
+    }, 0);
   }
 
-  handleDoubleClick(cell) {
-    if (!cell.isVisible() || cell.isFlagged()) {
+  handleDoubleClick(x, y) {
+    if (!this.isVisible(x, y) || this.isFlagged(x, y)) {
       return;
     }
 
-    const field = this.state.field.slice();
+    const {
+      counts,
+      dimensions: {
+        height,
+        width,
+      },
+    } = this.state;
 
-    const neighbors = cell.getNeighbors();
-    const unflaggedBombs = neighbors
-      .reduce((aggregate, index) => aggregate - (1 * field[index].isFlagged()), Number(cell.value));
+    const neighbors = getNeighbors(x, y, height, width);
+    const currentCount = counts[coordsToKey(x, y)];
+    const unflaggedBombs = neighbors.reduce((count, { x: neighborX, y: neighborY }) => {
+      const neighborDeccrement = (1 * this.isFlagged(neighborX, neighborY));
+      return count - neighborDeccrement;
+    }, currentCount);
 
     // If they haven't flagged exactly the number of bombs around this cell, ignore.
     if (unflaggedBombs) {
@@ -142,33 +187,40 @@ export default class Game extends Component {
     }
 
     // If they _did_ flag enough spaces but there was a bomb unflagged die.
-    if (neighbors.some(index => field[index].isBomb() && !field[index].isFlagged())) {
-      this.die(field);
+    const killers = neighbors.filter(({ x: neighborX, y: neighborY }) => {
+      const isBomb = this.isBomb(neighborX, neighborY);
+      const isFlagged = this.isFlagged(neighborX, neighborY);
+
+      return isBomb && !isFlagged;
+    });
+
+    if (killers.length) {
+      const { x: killerX, y: killerY } = killers[0];
+      this.die(killerX, killerY);
       return;
     }
 
-    this.floodFill(field, field[cell.index], true);
-    this.updateField(field);
+    this.floodFill({ x, y, force: true });
   }
 
-  handleLeftClick(cell) {
-    if (cell.isVisible() || cell.isFlagged()) {
+  handleLeftClick(x, y) {
+    if (this.isVisible(x, y) || this.isFlagged(x, y)) {
       return;
     }
 
-    const field = this.state.field.slice();
-    if (!this.state.populated) {
-      this.populateFieldAroundCell(field, cell);
+    const { field } = this.state;
+    let { bombs } = field;
+
+    if (!bombs.size) {
+      bombs = this.populateFieldAroundCell(x, y);
     }
 
-    if (cell.isBomb()) {
-      cell.markAsCauseOfDeath();
-      this.die(field);
+    if (this.isBomb(x, y)) {
+      this.die(x, y);
       return;
     }
 
-    this.floodFill(field, field[cell.index]);
-    this.updateField(field);
+    this.floodFill({ x, y, bombs });
   }
 
   handleMouseEvent(event, direction) {
@@ -177,54 +229,40 @@ export default class Game extends Component {
     }
   }
 
-  handleRightClick(cell) {
-    const field = this.state.field.slice();
+  handleRightClick(x, y) {
+    if (!(coordsToKey(x, y) in this.state.counts)) {
+      this.toggleFlag(x, y);
+    }
+  }
 
-    field[cell.index].toggleFlag();
-
-    this.setState({
+  populateFieldAroundCell(x, y) {
+    const {
+      dimensions: {
+        bombCount,
+      },
       field,
-      flagCount: this.state.flagCount + (cell.isFlagged() ? 1 : -1),
-    });
-  }
+      rng,
+    } = this.state;
 
-  populateFieldAroundCell(field, start) {
-    const { height, width, bombCount } = this.getDifficulty();
-    const length = height * width;
+    const bombs = new Set();
+    const chooseFrom = (choices) => {
+      const index = getRandomInRange(0, choices.length, rng);
 
-    forEach(Array(bombCount), () => {
-      while (true) {
-        const index = getRandomInRange(0, length, this.state.rng);
-        if (index !== start.index) {
-          const cell = field[index];
-
-          if (cell.isEmpty()) {
-            cell.value = 'B';
-            return;
-          }
-        }
+      bombs.add(choices[index]);
+      if (bombs.size !== bombCount) {
+        chooseFrom(choices.filter((_, i) => i !== index));
       }
-    });
+    };
 
-    this.setState({ populated: true });
+    chooseFrom([...field.hidden].filter(key => key !== coordsToKey(x, y)));
+
+    this.setState({ field: { ...field, bombs } });
+
+    return bombs;
   }
 
-  reset(difficulty) {
-    const difficultyToSave = difficulty || this.state.difficulty;
-    const seed = generateSeed();
-
-    this.stopTimer();
-    this.setState({
-      died: false,
-      difficulty: difficultyToSave,
-      field: generateField(difficultyToSave),
-      flagCount: 0,
-      populated: false,
-      rng: seedrandom(seed),
-      seed,
-      timer: 0,
-      won: false,
-    });
+  reset() {
+    this.setState(this.getInitialState());
   }
 
   startTimer() {
@@ -239,37 +277,63 @@ export default class Game extends Component {
     this.setState({ timer: this.state.timer + 1 });
   }
 
-  updateField(field) {
-    const { bombCount } = this.getDifficulty();
-    const hiddenCells = field.filter(cell => !cell.isVisible() || cell.isFlagged());
+  toggleFlag(x, y) {
+    const { field } = this.state;
+    const flags = new Set(field.flags);
+    const key = coordsToKey(x, y);
 
-    if (hiddenCells.length === bombCount) {
-      this.stopTimer();
-
-      hiddenCells.forEach((cell) => {
-        if (!cell.isFlagged()) {
-          cell.toggleFlag();
-        }
-      });
-
-      this.setState({ field, won: true, flagCount: bombCount });
+    if (flags.has(key)) {
+      flags.delete(key);
     } else {
-      this.setState({ field });
+      flags.add(key);
+    }
+
+    this.setState({
+      field: {
+        ...field,
+        flags,
+      },
+    });
+  }
+
+  checkForFinish() {
+    const { dimensions: { bombCount }, field } = this.state;
+    const { flags, hidden } = field;
+
+    const hiddenButNotFlagged = new Set([...hidden].filter(key => !flags.has(key)));
+
+    if (!hiddenButNotFlagged.size || (hiddenButNotFlagged.size + flags.size === bombCount)) {
+      this.stopTimer();
+      this.setState({
+        field: {
+          ...field,
+          flags: new Set([...flags, ...hiddenButNotFlagged]),
+        },
+        won: true,
+      });
     }
   }
 
-
   render() {
     const {
-      field,
-      died,
-      flagCount,
+      counts,
+      difficulty,
+      dimensions: {
+        bombCount,
+        height,
+        width,
+      },
+      field: {
+        bombs,
+        flags,
+        hidden,
+      },
+      killer,
       isMouseDown,
       seed,
       timer,
       won,
     } = this.state;
-    const { bombCount } = this.getDifficulty();
 
     return (
       <div>
@@ -278,7 +342,7 @@ export default class Game extends Component {
             <span key={key}>
               <input
                 type="radio"
-                checked={this.state.difficulty === key}
+                checked={difficulty === key}
                 onChange={() => this.changeDifficulty(key)}
               />
               {key}
@@ -291,18 +355,24 @@ export default class Game extends Component {
             <FaceButton
               onClick={() => this.reset()}
               anxious={isMouseDown}
-              died={died}
+              died={killer !== undefined}
               won={won}
             />
-            <DigitalNumber value={bombCount - flagCount} digits={3} />
+            <DigitalNumber value={bombCount - flags.size} digits={3} />
             <span>{seed}</span>
           </div>
           <div className="game-board">
             <Field
-              field={field}
+              height={height}
+              width={width}
+              counts={counts}
+              bombs={bombs}
+              flags={flags}
+              hidden={hidden}
+              killer={killer}
               onMouseDown={event => this.handleMouseEvent(event, 'down')}
               onMouseUp={event => this.handleMouseEvent(event, 'up')}
-              onUpdate={(event, cell) => this.handleClickEvent(event, cell)}
+              onUpdate={(event, x, y) => this.handleClickEvent(event, x, y)}
             />
           </div>
         </div>
